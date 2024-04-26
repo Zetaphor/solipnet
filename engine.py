@@ -2,10 +2,10 @@ import os
 import json
 import requests
 import random
+import re
+from flask import url_for
 from openai import OpenAI
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
-
 from dotenv import load_dotenv
 
 
@@ -16,7 +16,7 @@ and fits with the Dead Internet Theory theme of this little project
 
 load_dotenv()
 
-class ReaperEngine:
+class SolinetEngine:
     def __init__(self):
         self.client = OpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY")) # Ollama is pretty cool
         self.internet_db = dict() # TODO: Exporting this sounds like a good idea, losing all your pages when you kill the script kinda sucks ngl, also loading it is a thing too
@@ -26,14 +26,14 @@ class ReaperEngine:
 
         self.enable_images = bool(os.getenv("ENABLE_IMAGES"))
 
-        self.system_prompt = "You are an expert in creating realistic webpages. You do not create sample pages, instead you create webpages that are completely realistic and look as if they really existed on the web. You do not respond with anything but HTML, starting your messages with <!DOCTYPE html> and ending them with </html>."
+        self.system_prompt = "You are an expert in creating realistic webpages using TailwindCSS. You do not create sample pages, instead you create webpages that are completely realistic and look as if they really existed on the web. You do not respond with anything but HTML, starting your messages with <!DOCTYPE html> and ending them with </html>."
 
         if self.enable_images:
             self.system_prompt += " If the requested page is an image file, with an alt tag. Images should always have an alt tag. Images should always have a width attribute."
         else:
             self.system_prompt += " You use very little to no images at all in your HTML, CSS or JS, and when you do use an image it'll be linked from a real website instead."
 
-        self.system_prompt += " Link to very few external resources, CSS and JS should ideally be internal in <style>/<script> tags and not linked from elsewhere."
+        self.system_prompt += " Link to very few external resources, CSS should be limited to TailwindCSS classes."
 
     def image_search(self, keyword):
         # URL of the SearXNG API
@@ -60,10 +60,17 @@ class ReaperEngine:
             return "https://via.placeholder.com/100"
 
     def _format_page(self, dirty_html):
-        # Teensy function to replace all links on the page so they link to the root of the server
-        # Also to get rid of any http(s), this'll help make the link database more consistent
-
         soup = BeautifulSoup(dirty_html, "html.parser")
+
+        # Remove any TailwindCSS links, we want to use our local copy
+        tailwind_css = soup.find('link', rel='stylesheet', href=True)
+        if tailwind_css:
+            tailwind_css.decompose()
+
+        head_tag = soup.find('head')
+        if head_tag:
+            tailwind_css_link = soup.new_tag('link', rel='stylesheet', type='text/css', href=url_for('static', filename='tailwind.min.css'))
+            head_tag.append(tailwind_css_link)
 
         # Replace any https references to keep the link database consistent
         for a in soup.find_all("a"):
@@ -83,15 +90,12 @@ class ReaperEngine:
                 width = re.findall(r'\d+', img["width"])[0]
                 max_width = re.findall(r'\d+', os.getenv("MAX_IMAGE_WIDTH"))[0]
 
-                # Convert the extracted strings to integers
                 if int(width) > int(max_width):
                     img["width"] = max_width
 
             alt_text = img.get("alt", "")
             new_src = self.image_search(alt_text)
             img["src"] = new_src
-
-        return str(soup)
 
         return str(soup)
 
@@ -148,7 +152,7 @@ class ReaperEngine:
             },
             {
                 "role": "user",
-                "content": f"Generate the search results page for a ficticious search engine where the search query is '{query}'. Please include at least 10 results to different ficticious websites that relate to the query. DO NOT link to any real websites, every link should lead to a ficticious website. Feel free to add a bit of CSS to make the page look nice. Each search result will link to its own unique website that has nothing to do with the search engine and is not a path or webpage on the search engine's site. Make sure each ficticious website has a unique and somewhat creative URL. Don't mention that the results are ficticious."
+                "content": f"Generate the search results page for a ficticious search engine where the search query is '{query}'. Please include at least 10 results to different ficticious websites that relate to the query. DO NOT link to any real websites, every link should lead to a ficticious website. Use TailwindCSS to make the page look nice. Each search result will link to its own unique website that has nothing to do with the search engine and is not a path or webpage on the search engine's site. Make sure each ficticious website has a unique and somewhat creative URL. Don't mention that the results are ficticious."
             }],
             model="llama3",
             temperature=self.temperature,

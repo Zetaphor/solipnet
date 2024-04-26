@@ -1,10 +1,10 @@
 import flask
 from urllib.parse import urlparse
 
-from ReaperEngine import *
+from engine import *
 
 app = flask.Flask(__name__)
-engine = ReaperEngine()
+engine = SolinetEngine()
 
 @app.route("/", defaults={'path': ''})
 @app.route('/<path:path>')
@@ -17,7 +17,7 @@ def index(path):
         return engine.get_search(query)
     if path == "_export":
         return engine.export_internet()
-    
+
     # Generate the page
     parsed_path = urlparse("http://" + path)
     generated_page = engine.get_page(parsed_path.netloc, path=parsed_path.path)

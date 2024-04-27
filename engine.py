@@ -122,7 +122,7 @@ class SolinetEngine:
                 "role": "user",
                 "content": prompt
             }],
-            model="llama3",
+            model=os.getenv("LLM_MODEL"),
             temperature=self.prompts['page_prompt_temperature'],
             max_tokens=self.max_tokens
         )

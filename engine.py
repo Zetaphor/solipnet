@@ -103,15 +103,12 @@ class SolinetEngine:
 
         return str(soup)
 
-    def format_page_prompt(self, prompt, url, path):
-        return self.prompts['page_prompt'].replace("{url}", url).replace("{path}", path)
-
     def get_page(self, url, path, search_query=None):
         # Return already generated page if already generated page
         try: return self.internet_db[url][path]
         except: pass
 
-        prompt = self.format_page_prompt(self.prompts['page_prompt'], url, path)
+        prompt = self.prompts['page_prompt'].replace("{url}", url).replace("{path}", path)
         # TODO: I wanna add all other pages to the prompt so the next pages generated resemble them, but since Llama 3 is only 8k context I hesitate to do so
 
         # Add other pages to the prompt if they exist

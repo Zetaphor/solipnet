@@ -7,36 +7,40 @@ from flask import url_for
 from openai import OpenAI
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-
-
-''' About the name...
-I apologise for it sounding pretentious or whatever, but I dont care it sounds cool and cyberpunk-y(-ish)
-and fits with the Dead Internet Theory theme of this little project
-'''
+from json_repair import repair_json
 
 load_dotenv()
 
 class SolinetEngine:
     def __init__(self):
-        self.client = OpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY")) # Ollama is pretty cool
-        self.internet_db = dict() # TODO: Exporting this sounds like a good idea, losing all your pages when you kill the script kinda sucks ngl, also loading it is a thing too
+        self.client = OpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
+        self.internet_db = dict()
 
-        self.temperature = 2.1 # Crank up for goofier webpages (but probably less functional javascript)
-        self.max_tokens = 4096
+        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS"))
 
         self.enable_images = bool(os.getenv("ENABLE_IMAGES"))
 
-        self.system_prompt = "You are an expert in creating realistic webpages using TailwindCSS. You do not create sample pages, instead you create webpages that are completely realistic and look as if they really existed on the web. You do not respond with anything but HTML, starting your messages with <!DOCTYPE html> and ending them with </html>."
+        self.prompts = dict()
+        self.load_prompts()
 
-        if self.enable_images:
-            self.system_prompt += " If the requested page is an image file, with an alt tag. Images should always have an alt tag. Images should always have a width attribute."
-        else:
-            self.system_prompt += " You use very little to no images at all in your HTML, CSS or JS, and when you do use an image it'll be linked from a real website instead."
+    def load_prompts(self, filename="prompts.json"):
+        try:
+            with open(filename, 'r') as file:
+                data = json.load(file)
+                self.prompts = data
 
-        self.system_prompt += " Link to very few external resources, CSS should be limited to TailwindCSS classes."
+                if self.enable_images:
+                    self.prompts['system_prompt'] = data['system_prompt_with_images']
+                else:
+                    self.prompts['system_prompt'] = data['system_prompt_without_images']
+        except FileNotFoundError:
+            print(f"Error: The file {filename} does not exist.")
+        except json.JSONDecodeError:
+            print("Error: The prompts file is not a valid JSON.")
+        except Exception as e:
+            print(f"An error occurred loading the prompts: {e}")
 
     def image_search(self, keyword):
-        # URL of the SearXNG API
         url = os.getenv("SEARXNG_URL")
 
         params = {
@@ -69,7 +73,7 @@ class SolinetEngine:
 
         head_tag = soup.find('head')
         if head_tag:
-            tailwind_css_link = soup.new_tag('link', rel='stylesheet', type='text/css', href=url_for('static', filename='tailwind.min.css'))
+            tailwind_css_link = soup.new_tag('link', rel='stylesheet', type='text/css', href=url_for('static', filename='css/tailwind.min.css'))
             head_tag.append(tailwind_css_link)
 
         # Replace any https references to keep the link database consistent
@@ -99,17 +103,15 @@ class SolinetEngine:
 
         return str(soup)
 
-    def get_index(self):
-        # Super basic start page, just to get everything going
-        return "<!DOCTYPE html><html><body><h3>Enter the Dead Internet</h3><form action='/' ><input name='query'> <input type='submit' value='Search'></form></body></html>"
+    def format_page_prompt(self, prompt, url, path):
+        return self.prompts['page_prompt'].replace("{url}", url).replace("{path}", path)
 
     def get_page(self, url, path, search_query=None):
         # Return already generated page if already generated page
         try: return self.internet_db[url][path]
         except: pass
 
-        # Construct the basic prompt
-        prompt = f"Give me a classic geocities-style webpage from the fictional site of '{url}' at the resource path of '{path}'. Make sure all links generated either link to an external website, or if they link to another resource on the current website have the current url prepended ({url}) to them. For example if a link on the page has the href of 'help' or '/help', it should be replaced with '{url}/path'. All your links must use absolute paths, do not shorten anything. Make the page look nice and unique using internal CSS stylesheets, don't make the pages look boring or generic."
+        prompt = self.format_page_prompt(self.prompts['page_prompt'], url, path)
         # TODO: I wanna add all other pages to the prompt so the next pages generated resemble them, but since Llama 3 is only 8k context I hesitate to do so
 
         # Add other pages to the prompt if they exist
@@ -120,18 +122,17 @@ class SolinetEngine:
         generated_page_completion = self.client.chat.completions.create(messages=[
             {
                 "role": "system",
-                "content": self.system_prompt
+                "content": self.prompts['system_prompt']
             },
             {
                 "role": "user",
                 "content": prompt
             }],
-            model="llama3", # What a great model, works near perfectly with this, shame its only got 8k context (does Ollama even set it to that by default?)
-            temperature=self.temperature,
+            model="llama3",
+            temperature=self.prompts['page_prompt_temperature'],
             max_tokens=self.max_tokens
         )
 
-        # Get and format the page
         generated_page = generated_page_completion.choices[0].message.content
         open("curpage.html", "w+").write(generated_page)
         generated_page = self._format_page(generated_page)
@@ -143,29 +144,65 @@ class SolinetEngine:
 
         return generated_page
 
+    def fix_malformed_json(self, malformed_json):
+        malformed_json = malformed_json.replace('\n', '')
+
+        # with open("search_results.json", "w") as file:
+        #     file.write(malformed_json)
+
+        fixed_json = repair_json(malformed_json)
+
+        # with open("fixed_search_results.json", "w") as file:
+        #     file.write(fixed_json)
+
+        try:
+            valid_json = json.loads(fixed_json)
+            return valid_json
+        except json.JSONDecodeError as e:
+            print(f"Error fixing JSON: {e}")
+            return None
+
+    def parse_search_results(self, results_string):
+        results = self.fix_malformed_json(results_string)
+
+        if results_string is not None:
+            if isinstance(results, dict):
+                if "results" in results:
+                    results = results["results"]
+            elif isinstance(results, list):
+                if "results" in results[0]:
+                    # The results key is returned in an array
+                    results = results[0]["results"]
+                else:
+                    # The results key is missing and it's just a list of results
+                    return results
+
+            return results
+        else:
+            print("Error parsing search results")
+            return {}
+
+
     def get_search(self, query):
-        # Generates a cool little search page, this differs in literally every search and is not cached so be weary of losing links
-        search_page_completion = self.client.chat.completions.create(messages=[
+        query_prompt = self.prompts['search_prompt'].replace("{query}", query)
+        search_results_completion = self.client.chat.completions.create(messages=[
             {
                 "role": "system",
-                "content": self.system_prompt
+                "content": self.prompts['search_system_prompt']
             },
             {
                 "role": "user",
-                "content": f"Generate the search results page for a ficticious search engine where the search query is '{query}'. Please include at least 10 results to different ficticious websites that relate to the query. DO NOT link to any real websites, every link should lead to a ficticious website. Use TailwindCSS to make the page look nice. Each search result will link to its own unique website that has nothing to do with the search engine and is not a path or webpage on the search engine's site. Make sure each ficticious website has a unique and somewhat creative URL. Don't mention that the results are ficticious."
+                "content": query_prompt
             }],
             model="llama3",
-            temperature=self.temperature,
+            temperature=self.prompts['search_prompt_temperature'],
             max_tokens=self.max_tokens
         )
 
-        return self._format_page(search_page_completion.choices[0].message.content)
+        search_results = self.parse_search_results(search_results_completion.choices[0].message.content)
+
+        return search_results
+
 
     def export_internet(self, filename="internet.json"):
         json.dump(self.internet_db, open(filename, "w+"))
-        russells  = "Russell: I'm reading it here on my computer. I downloaded the internet before the war.\n"
-        russells += "Alyx: You downloaded the entire internet.\n"
-        russells += "Russell: Ehh, most of it.\n"
-        russells += "Alyx: Nice.\n"
-        russells += "Russell: Yeah, yeah it is."
-        return russells

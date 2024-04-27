@@ -134,7 +134,7 @@ class SolinetEngine:
         )
 
         generated_page = generated_page_completion.choices[0].message.content
-        open("curpage.html", "w+").write(generated_page)
+        open("tmp/curpage.html", "w+").write(generated_page)
         generated_page = self._format_page(generated_page)
 
         # Add the page to the database
@@ -147,13 +147,13 @@ class SolinetEngine:
     def fix_malformed_json(self, malformed_json):
         malformed_json = malformed_json.replace('\n', '')
 
-        # with open("search_results.json", "w") as file:
-        #     file.write(malformed_json)
+        with open("tmp/search_results.json", "w") as file:
+            file.write(malformed_json)
 
         fixed_json = repair_json(malformed_json)
 
-        # with open("fixed_search_results.json", "w") as file:
-        #     file.write(fixed_json)
+        with open("tmp/fixed_search_results.json", "w") as file:
+            file.write(fixed_json)
 
         try:
             valid_json = json.loads(fixed_json)

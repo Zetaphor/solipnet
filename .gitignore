@@ -1,3 +1,4 @@
 __pycache__/
-curpage.html
+tmp/*
+!tmp/.gitkeep
 internet.json

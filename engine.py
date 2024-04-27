@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from json_repair import repair_json
 
 load_dotenv()
-
 class SolinetEngine:
     def __init__(self):
         self.client = OpenAI(base_url=os.getenv("BASE_URL"), api_key=os.getenv("API_KEY"))
@@ -109,13 +108,11 @@ class SolinetEngine:
         except: pass
 
         prompt = self.prompts['page_prompt'].replace("{url}", url).replace("{path}", path)
-        # TODO: I wanna add all other pages to the prompt so the next pages generated resemble them, but since Llama 3 is only 8k context I hesitate to do so
 
         # Add other pages to the prompt if they exist
         if url in self.internet_db and len(self.internet_db[url]) > 1:
             pass
 
-        # Generate the page
         generated_page_completion = self.client.chat.completions.create(messages=[
             {
                 "role": "system",
@@ -134,7 +131,6 @@ class SolinetEngine:
         open("tmp/curpage.html", "w+").write(generated_page)
         generated_page = self._format_page(generated_page)
 
-        # Add the page to the database
         if not url in self.internet_db:
             self.internet_db[url] = dict()
         self.internet_db[url][path] = generated_page
@@ -199,7 +195,6 @@ class SolinetEngine:
         search_results = self.parse_search_results(search_results_completion.choices[0].message.content)
 
         return search_results
-
 
     def export_internet(self, filename="internet.json"):
         json.dump(self.internet_db, open(filename, "w+"))

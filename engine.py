@@ -75,6 +75,9 @@ class SolinetEngine:
             tailwind_css_link = soup.new_tag('link', rel='stylesheet', type='text/css', href=url_for('static', filename='css/tailwind.min.css'))
             head_tag.append(tailwind_css_link)
 
+            global_css_link = soup.new_tag('link', rel='stylesheet', type='text/css', href=url_for('static', filename='css/global.css'))
+            head_tag.append(global_css_link)
+
         # Replace any https references to keep the link database consistent
         for a in soup.find_all("a"):
             href = a.get("href", "")

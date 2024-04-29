@@ -4,23 +4,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solipnet Search Engine</title>
-  <link href="{{ url_for('static', filename='tailwind.min.css') }}" rel="stylesheet">
+  <title>{{ query }} - Solipnet Search Engine</title>
+  <link href="{{ url_for('static', filename='css/tailwind.min.css') }}" rel="stylesheet">
 </head>
 
-<body class="bg-gray-100">
-  <div class="container mx-auto px-4">
-    <h1 class="text-xl font-bold text-gray-800 my-6">Results for "{{ query }}"</h1>
-    <ul class="space-y-4">
-      {% for result in results %}
-      <li class="bg-white p-4 shadow rounded">
-        <h2 class="text-lg font-bold text-blue-600">{{ result['title'] }}</h2>
-        <p class="text-gray-600">{{ result['description'] }}</p>
-        <a href="{{ result['url'] }}" class="text-blue-600 hover:text-blue-800">{{ result['url'] }}</a>
-      </li>
-      {% endfor %}
-    </ul>
+<body>
+  <!-- Search bar with full width and distinct styling -->
+  <div class="flex items-center bg-gray-100 p-4 shadow-lg">
+    <input type="text" placeholder="Search for anything..."
+      class="flex-grow h-12 px-4 rounded-l-lg border-t mr-0 border-b border-l text-gray-800 border-gray-200 bg-white"
+      value="{{ query }}" />
+    <button
+      class="px-8 rounded-r-lg bg-blue-500 text-white font-bold py-4 uppercase border-blue-500 border-t border-b border-r">
+      Search
+    </button>
   </div>
+  <ul class="space-y-4">
+    {% for result in results %}
+    <li class="mx-4">
+      <a href="{{ result['url'] }}" class="text-blue-600 hover:text-blue-800 visited:text-purple-600 text-sm">{{
+        result['url']
+        }}</a>
+      <h2 class="text-lg font-bold text-blue-600">{{ result['title'] }}</h2>
+      <p class="text-gray-600">{{ result['description'] }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('click', (event) => {
+        if (event.target instanceof HTMLAnchorElement) {
+          event.preventDefault();
+          window.parent.postMessage({ url: event.target.href }, '*');
+        }
+      });
+    })
+  </script>
 </body>
 
 </html>

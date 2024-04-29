@@ -141,7 +141,11 @@ class SolinetEngine:
         return generated_page
 
     def fix_malformed_json(self, malformed_json):
+        # Remove newlines
         malformed_json = malformed_json.replace('\n', '')
+
+        # Remove sections of 2 or more spaces
+        malformed_json = re.sub(r'\s{2,}', '', malformed_json)
 
         with open("tmp/search_results.json", "w") as file:
             file.write(malformed_json)

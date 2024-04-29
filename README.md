@@ -1,32 +1,37 @@
-# Dead-Internet
-So we all know the classic [Dead Internet Theory](https://en.wikipedia.org/wiki/Dead_Internet_theory), and if you're reading this I assume you at least know what an LLM is. Need I say much more? Yeah of course!
+# Solipnet
 
-This is a little project I threw together in a couple hours that lets you surf a completely fake web! You run a search query in the only non-generated page `/` and it generates a search results page with fake links that lead to fake websites that lead to more fake websites!
-It's not perfect, not by a long shot, but it works well enough for me to spend like an hour just going through it and laughing at what it makes.
+_This project started its life as a fork of [Sebby37's Dead Internet](https://github.com/Sebby37/Dead-Internet) repo, but has since diverged._
 
-If you encounter any issues with the search results page, reload and it'll generate a new page. If you get any issues with the other generated pages then try make slight adjustments to the URL to get a different page, right now there isn't yet a way to regenerate a page.
 
-Also when you navigate to the `/_export` path or kill the server, the JSON of your current internet will be saved to the file `internet.json` in the root of the project. Right now you can't load it back yet but maybe I'll add that in the future if I want, or you could fork it and add it yourself the code isn't very complicated at all.
+## Overview
 
-## How do I run this???
-Simple, first install Ollama [here](https://ollama.com/download), then pull your model of choice. The one I used is [Llama 3 8B Instruct](https://ollama.com/library/llama3) which works really well and is very impressive for an 8B model. If you don't want to use Ollama you can use any other OpenAI-compatible server by modifying the `client` declaration in ReaperEngine.py to link to your server, I recommend [llama.cpp's server example](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) for something lightweight, or [text-generation-webui](https://github.com/oobabooga/text-generation-webui/) for a fully featured LLM web interface.
+This project presents an alternate reality web browser, powered by an LLM. You start at the Solipnet search engine, where you can enter any query imaginable. This will present a list of search results which link out to AI generated websites. Those websites may further link to other AI generated websites.
 
-Due to popular demand and it not being 12am anymore I finally added a requirements.txt file! Now instead of manually installing dependencies you can just run `pip install -r requirements.txt` in the root of the project and it'll install them all for you!
+## Requirements
 
-(If you want to manually install dependenies, follow these instructions) Next you'll need to install Python if you don't already have it, I run Python 3.10.12 (came with my Linux Mint install), then the libraries you'll need are:
-- [OpenAI](https://pypi.org/project/openai/)
-- [BeautifulSoup4](https://pypi.org/project/beautifulsoup4/)
-- [Flask](https://pypi.org/project/Flask/)
+- Access to an OpenAI compatible API, ideally with a locally hosted model (llama.cpp server, ollama, LM Studio, oobabooga, etc.)
+- Python 3.10.12
+- A SearXNG instance with the JSON API support enabled, if you want images in your pages.
 
-You can install them by running `pip install -r requirements.txt`
+The model I used for testing is the [Llama 3 8B Instruct Q4_K_M GGUF from QuantFactory](https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF).
 
-You can modify the API URL and API key in the `.env` file.
+## Setup
 
-Once those are installed, simply run the main.py file and navigate to http://127.0.0.1:5000 or whatever URL Flask gives you and have fun!
+Install the requirements:
 
-## Image Support
+```bash
+pip install -r requirements.txt
+```
 
-Optional image support is implemented using the [SearXNG](https://docs.searxng.org/) search engine. To enable it, set the `ENABLE_IMAGES` environment variable to `true` and provide a URL in the `SEARXNG_URL` environment variable to your SearXNG instance. This does require you to have the JSON format enabled in your `settings.yml`, which is not by default.
+Modify the `.env` file with your API URL and API key.
+Optionally, you can also modify the `ENABLE_IMAGES` environment variable to `true` and provide a URL in the `SEARXNG_URL` environment variable to your SearXNG instance.
 
-## Inspiration
-I'll admit it, I'm not the most creative person. I got this idea from [this reddit comment on r/localllama](https://new.reddit.com/r/LocalLLaMA/comments/1c6ejb8/comment/l02eeqx/), so thank you very much commenter!
+## Usage
+
+Run the server:
+
+```bash
+python main.py
+```
+
+Open your browser to `http://localhost:5000`.

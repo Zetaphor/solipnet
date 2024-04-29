@@ -35,3 +35,9 @@ python main.py
 ```
 
 Open your browser to `http://localhost:5000`.
+
+## Screenshots
+
+![image](https://github.com/Zetaphor/solipnet/assets/3112763/70925576-478d-4c7b-875f-c6c796623f1d)
+![image](https://github.com/Zetaphor/solipnet/assets/3112763/4c489f83-3f2a-4deb-97fe-60e391a6a59e)
+
